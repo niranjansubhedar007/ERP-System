@@ -22,6 +22,7 @@ export default function Inward() {
     setLoading(true);
     api.get('/inward').then(r => setRecords(r.data)).finally(() => setLoading(false));
   }, []);
+console.log(poItems);
 
   useEffect(() => {
     fetchRecords();

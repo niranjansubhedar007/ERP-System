@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, ShoppingCart, TruckIcon, PackageOpen,
   Factory, Send, BarChart3, Box, Archive, Users, Truck,
-  Menu, X, LogOut, ChevronRight, User, Minus,
+  Menu, X, LogOut, ChevronRight, User,
 } from 'lucide-react';
 
 // Divider helper
@@ -50,11 +50,7 @@ const ROLE_COLORS = {
   production: 'bg-orange-100 text-orange-700',
 };
 
-const SECTION_LABELS = {
-  '/customer-orders': 'WORKFLOW',
-  '/inventory':       'MASTERS',
-  '/reports':         'REPORTS & ADMIN',
-};
+
 
 export default function Layout({ children }) {
   const { user, logout, hasRole } = useAuth();
