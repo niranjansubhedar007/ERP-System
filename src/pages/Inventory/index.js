@@ -4,7 +4,6 @@ import toast from 'react-hot-toast';
 import PageHeader from '../../components/PageHeader';
 import Table from '../../components/Table';
 import Spinner from '../../components/Spinner';
-import { RefreshCw } from 'lucide-react';
 
 export default function Inventory() {
   const [inventory, setInventory] = useState([]);
@@ -50,11 +49,6 @@ export default function Inventory() {
       <PageHeader
         title="Inventory"
         subtitle="Real-time stock levels — updated automatically by all modules"
-        action={
-          <button onClick={fetchInventory} className="flex items-center gap-2 border px-4 py-2 rounded-lg text-sm hover:bg-gray-50">
-            <RefreshCw size={16} /> Refresh
-          </button>
-        }
       />
 
       {/* Summary Cards */}
