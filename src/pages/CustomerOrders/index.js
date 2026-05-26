@@ -15,6 +15,7 @@ const EMPTY_FORM = { customer_id: '', notes: '', items: [{ product_id: '', quant
 export default function CustomerOrders() {
   const { hasRole } = useAuth();
   const [orders, setOrders] = useState([]);
+  const [pagination, setPagination] = useState(null);
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,9 +25,12 @@ export default function CustomerOrders() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  const fetchOrders = useCallback(() => {
+  const fetchOrders = useCallback((p = 1) => {
     setLoading(true);
-    api.get('/customer-orders').then(r => setOrders(r.data)).finally(() => setLoading(false));
+    api.get(`/customer-orders?page=${p}&limit=10`)
+      .then(r => { setOrders(r.data.data); setPagination(r.data.pagination); })
+      .catch(() => toast.error('Failed to load orders'))
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -68,7 +72,7 @@ export default function CustomerOrders() {
         toast.success('Order created');
       }
       setShowForm(false);
-      fetchOrders();
+      fetchOrders(1);
     } catch (err) { toast.error(err.response?.data?.error || 'Failed'); }
   };
 
@@ -77,7 +81,7 @@ export default function CustomerOrders() {
       await api.delete(`/customer-orders/${deleteTarget.id}`);
       toast.success('Order deleted');
       setDeleteTarget(null);
-      fetchOrders();
+      fetchOrders(1);
     } catch (err) { toast.error(err.response?.data?.error || 'Cannot delete'); }
   };
 
@@ -90,7 +94,7 @@ export default function CustomerOrders() {
     { key: 'created_at', label: 'Date', render: v => new Date(v).toLocaleDateString('en-IN') },
     { key: 'id', label: 'Actions', render: (id, row) => (
       <div className="flex items-center gap-3">
-        <button onClick={() => handleView(id)} className="text-blue-600 hover:text-blue-800"><Eye size={15} /></button>
+        <button onClick={() => handleView(id)} className="text-indigo-500 hover:text-indigo-700"><Eye size={15} /></button>
         {['pending','confirmed'].includes(row.status) && hasRole('admin','sales') && (
           <button onClick={() => openEdit(row)} className="text-green-600 hover:text-green-800"><Pencil size={15} /></button>
         )}
@@ -105,27 +109,27 @@ export default function CustomerOrders() {
     <div>
       <PageHeader title="Customer Orders" subtitle="Manage orders placed by customers"
         action={hasRole('admin','sales') && (
-          <button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"><Plus size={16} /> New Order</button>
+          <button onClick={openCreate} className="flex items-center gap-2 btn-primary"><Plus size={16} /> New Order</button>
         )}
       />
-      {loading ? <Spinner /> : <Table columns={columns} data={orders} emptyMessage="No customer orders yet" />}
+      {loading ? <Spinner /> : <Table columns={columns} data={orders} emptyMessage="No customer orders yet" pagination={pagination} onPageChange={fetchOrders} />}
 
       {/* Create / Edit Modal */}
       <Modal open={showForm} onClose={() => setShowForm(false)} title={editing ? `Edit Order: ${editing.order_number}` : 'Create Customer Order'} size="lg">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Customer *</label>
+              <label className="form-label">Customer *</label>
               <select required value={form.customer_id} onChange={e => setForm({ ...form, customer_id: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                className="form-input">
                 <option value="">Select customer</option>
                 {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+              <label className="form-label">Notes</label>
               <input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="form-input" />
             </div>
           </div>
           <div>
@@ -136,17 +140,17 @@ export default function CustomerOrders() {
             {form.items.map((item, i) => (
               <div key={i} className="grid grid-cols-3 gap-2 mb-2">
                 <select required value={item.product_id} onChange={e => updateItem(i, 'product_id', e.target.value)}
-                  className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                   <option value="">Select product</option>
                   {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
                 </select>
                 <input type="number" min="0.001" step="0.001" required placeholder="Qty" value={item.quantity}
                   onChange={e => updateItem(i, 'quantity', e.target.value)}
-                  className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                 <div className="flex gap-2">
                   <input type="number" min="0" step="0.01" required placeholder="Unit Price ₹" value={item.unit_price}
                     onChange={e => updateItem(i, 'unit_price', e.target.value)}
-                    className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                   {form.items.length > 1 && (
                     <button type="button" onClick={() => removeItem(i)} className="text-red-400 hover:text-red-600 px-2">✕</button>
                   )}
@@ -155,8 +159,8 @@ export default function CustomerOrders() {
             ))}
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">{editing ? 'Update Order' : 'Create Order'}</button>
+            <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary">{editing ? 'Update Order' : 'Create Order'}</button>
           </div>
         </form>
       </Modal>
@@ -177,7 +181,7 @@ export default function CustomerOrders() {
                   <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">Product</th>
                   <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500">Qty</th>
                   <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500">Unit Price</th>
-                  <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500">Total</th>
+                  <th className="px-4 py-2 text-right text-xs font-semibold text-slate-500">Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y">

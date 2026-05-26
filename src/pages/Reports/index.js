@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import PageHeader from '../../components/PageHeader';
@@ -19,7 +19,7 @@ export default function Reports() {
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({ from: '', to: '', status: '', type: '' });
 
-  const fetchReport = async () => {
+  const fetchReport = useCallback(async (p = 1) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -27,15 +27,21 @@ export default function Reports() {
       if (filters.to) params.set('to', filters.to);
       if (filters.status) params.set('status', filters.status);
       if (filters.type) params.set('type', filters.type);
+      params.set('page', p);
+      params.set('limit', 10);
       const r = await api.get(`/reports/${tab}?${params}`);
       setData(r.data);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to generate report');
+      toast.error(err.response?.data?.error || 'Failed to load report');
       setData(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [tab, filters]);
+
+  useEffect(() => {
+    fetchReport(1);
+  }, [fetchReport]);
 
   const orderColumns = [
     { key: 'order_number', label: 'Order #' },
@@ -76,32 +82,32 @@ export default function Reports() {
       {/* Tabs */}
       <div className="flex gap-2 mb-6">
         {TABS.map(({ key, label, icon: Icon }) => (
-          <button key={key} onClick={() => { setTab(key); setData(null); }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${tab === key ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-50 border-gray-200 text-gray-600'}`}>
+          <button key={key} onClick={() => setTab(key)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${tab === key ? 'bg-indigo-600 text-white border-indigo-600' : 'hover:bg-slate-50 border-slate-200 text-slate-600'}`}>
             <Icon size={16} /> {label}
           </button>
         ))}
       </div>
 
       {/* Filters */}
-      <div className="bg-white border rounded-xl p-4 mb-6">
+      <div className="bg-white border border-slate-100 rounded-xl shadow-card p-4 mb-6">
         <div className="flex flex-wrap gap-3 items-end">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">From Date</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">From Date</label>
             <input type="date" value={filters.from} onChange={e => setFilters({ ...filters, from: e.target.value })}
-              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">To Date</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">To Date</label>
             <input type="date" value={filters.to} onChange={e => setFilters({ ...filters, to: e.target.value })}
-              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           {tab === 'orders' && (
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Status</label>
               <select value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}
-                className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">All</option>
+                className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">All Statuses</option>
                 {['pending','confirmed','in_production','ready','dispatched','cancelled'].map(s => (
                   <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
                 ))}
@@ -110,10 +116,10 @@ export default function Reports() {
           )}
           {tab === 'inventory' && (
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Type</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Type</label>
               <select value={filters.type} onChange={e => setFilters({ ...filters, type: e.target.value })}
-                className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">All</option>
+                className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">All Types</option>
                 <option value="raw_material">Raw Material</option>
                 <option value="finished_good">Finished Good</option>
               </select>
@@ -121,19 +127,16 @@ export default function Reports() {
           )}
           {tab === 'production' && (
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Status</label>
               <select value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}
-                className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">All</option>
+                className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">All Statuses</option>
                 {['planned','in_progress','completed','cancelled'].map(s => (
                   <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
                 ))}
               </select>
             </div>
           )}
-          <button onClick={fetchReport} className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-            Generate Report
-          </button>
         </div>
       </div>
 
@@ -141,13 +144,13 @@ export default function Reports() {
 
       {!loading && data && (
         <div className="space-y-4">
-          {/* Summary */}
+          {/* Summary Cards */}
           {data.summary && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {Object.entries(data.summary).map(([key, val]) => (
-                <div key={key} className="bg-white border rounded-xl p-4">
-                  <p className="text-xs text-gray-500 capitalize mb-1">{key.replace(/_/g, ' ')}</p>
-                  <p className="text-xl font-bold text-gray-900">
+                <div key={key} className="bg-white border border-slate-100 rounded-xl shadow-card p-4">
+                  <p className="text-xs text-slate-500 capitalize mb-1">{key.replace(/_/g, ' ')}</p>
+                  <p className="text-xl font-bold text-slate-900">
                     {typeof val === 'object' ? JSON.stringify(val) :
                       key.includes('value') ? `₹${parseFloat(val || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : val}
                   </p>
@@ -157,16 +160,16 @@ export default function Reports() {
           )}
 
           {/* Table */}
-          {tab === 'orders' && <Table columns={orderColumns} data={data.orders || []} />}
-          {tab === 'inventory' && <Table columns={inventoryColumns} data={data.inventory || []} />}
-          {tab === 'production' && <Table columns={productionColumns} data={data.production_orders || []} />}
+          {tab === 'orders' && <Table columns={orderColumns} data={data.orders || []} pagination={data.pagination} onPageChange={fetchReport} />}
+          {tab === 'inventory' && <Table columns={inventoryColumns} data={data.inventory || []} pagination={data.pagination} onPageChange={fetchReport} />}
+          {tab === 'production' && <Table columns={productionColumns} data={data.production_orders || []} pagination={data.pagination} onPageChange={fetchReport} />}
         </div>
       )}
 
       {!loading && !data && (
-        <div className="text-center py-16 text-gray-400">
-          <BarChart3 size={48} className="mx-auto mb-4 opacity-30" />
-          <p>Set filters and click "Generate Report" to view data</p>
+        <div className="text-center py-16 text-slate-400">
+          <BarChart3 size={40} className="mx-auto mb-3 opacity-30" />
+          <p className="text-sm">No data available for the selected filters</p>
         </div>
       )}
     </div>

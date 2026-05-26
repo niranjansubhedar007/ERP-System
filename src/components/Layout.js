@@ -1,71 +1,69 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, ShoppingCart, TruckIcon, PackageOpen,
   Factory, Send, BarChart3, Box, Archive, Users, Truck,
-  Menu, X, LogOut, ChevronRight, User,
+  Menu, X, LogOut, User,
 } from 'lucide-react';
 
-// Divider helper
-const DIVIDER = { divider: true, label: '' };
+const DIVIDER = { divider: true };
 
 const navItems = [
-  // ── Dashboard ─────────────────────────────
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin','sales','purchase','warehouse','production'] },
-
   DIVIDER,
-
-  // ── Step 1: Master Setup ──────────────────
   { to: '/customers',  label: 'Customers',                   icon: User,      roles: ['admin','sales'] },
   { to: '/vendors',    label: 'Vendors',                     icon: Truck,     roles: ['admin','purchase'] },
   { to: '/products',   label: 'Products & Bill of Materials', icon: Box,       roles: ['admin'] },
-
   DIVIDER,
-
-  // ── Step 2: Workflow ──────────────────────
   { to: '/customer-orders', label: 'Customer Orders', icon: ShoppingCart, roles: ['admin','sales'] },
   { to: '/purchase-orders', label: 'Purchase Orders', icon: TruckIcon,    roles: ['admin','purchase'] },
   { to: '/inward',          label: 'Inward (GRN)',    icon: PackageOpen,  roles: ['admin','warehouse','purchase'] },
   { to: '/production',      label: 'Production',      icon: Factory,      roles: ['admin','production'] },
   { to: '/sales',           label: 'Sale / Outward',  icon: Send,         roles: ['admin','sales','warehouse'] },
-
   DIVIDER,
-
-  // ── Step 3: Tracking & Reports ────────────
   { to: '/inventory', label: 'Inventory', icon: Archive,   roles: ['admin','warehouse','purchase','production','sales'] },
   { to: '/reports',   label: 'Reports',   icon: BarChart3, roles: ['admin','sales','purchase','warehouse','production'] },
-
   DIVIDER,
-
-  // ── Admin ─────────────────────────────────
   { to: '/users', label: 'Users', icon: Users, roles: ['admin'] },
 ];
 
-const ROLE_COLORS = {
-  admin:      'bg-purple-100 text-purple-700',
-  sales:      'bg-blue-100 text-blue-700',
-  purchase:   'bg-yellow-100 text-yellow-700',
-  warehouse:  'bg-green-100 text-green-700',
-  production: 'bg-orange-100 text-orange-700',
+const ROLE_STYLES = {
+  admin:      'bg-violet-500/20 text-violet-300',
+  sales:      'bg-blue-500/20 text-blue-300',
+  purchase:   'bg-amber-500/20 text-amber-300',
+  warehouse:  'bg-emerald-500/20 text-emerald-300',
+  production: 'bg-orange-500/20 text-orange-300',
 };
 
-
+const ROUTE_LABELS = {
+  '/': 'Dashboard',
+  '/customers': 'Customers',
+  '/vendors': 'Vendors',
+  '/products': 'Products & Bill of Materials',
+  '/customer-orders': 'Customer Orders',
+  '/purchase-orders': 'Purchase Orders',
+  '/inward': 'Inward (GRN)',
+  '/production': 'Production',
+  '/sales': 'Sale / Outward',
+  '/inventory': 'Inventory',
+  '/reports': 'Reports',
+  '/users': 'Users',
+};
 
 export default function Layout({ children }) {
   const { user, logout, hasRole } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(true);
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
-  // Build visible list — filter out dividers that have no visible items after them
   const visible = navItems.filter(item => {
     if (item.divider) return true;
     return hasRole(...item.roles);
   });
 
-  // Remove leading/consecutive/trailing dividers
   const cleanNav = visible.reduce((acc, item, i) => {
     if (item.divider) {
       const prev = acc[acc.length - 1];
@@ -76,30 +74,40 @@ export default function Layout({ children }) {
     return [...acc, item];
   }, []);
 
+  const pageTitle = ROUTE_LABELS[location.pathname] || 'ERP System';
+
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 overflow-hidden">
       {/* Sidebar */}
-      <aside className={`${open ? 'w-64' : 'w-16'} bg-gray-900 flex flex-col transition-all duration-200 shrink-0`}>
-        {/* Header */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-700">
+      <aside
+        className={`${open ? 'w-64' : 'w-16'} bg-slate-900 flex flex-col transition-all duration-200 shrink-0 border-r border-slate-800`}
+      >
+        {/* Logo */}
+        <div className="flex items-center justify-between h-16 px-4 border-b border-slate-800">
           {open && (
-            <div>
-              <p className="text-white font-bold text-base leading-tight">ERP System</p>
-              <p className="text-gray-400 text-xs">Manufacturing Workflow</p>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shrink-0 shadow-lg shadow-indigo-600/30">
+                <Factory size={15} className="text-white" />
+              </div>
+              <div>
+                <p className="text-white font-bold text-sm leading-tight">ERP System</p>
+                <p className="text-slate-500 text-xs">Manufacturing</p>
+              </div>
             </div>
           )}
-          <button onClick={() => setOpen(!open)} className="text-gray-400 hover:text-white p-1 rounded">
-            {open ? <X size={20} /> : <Menu size={20} />}
+          <button
+            onClick={() => setOpen(!open)}
+            className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors ml-auto"
+          >
+            {open ? <X size={17} /> : <Menu size={17} />}
           </button>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-3 px-2">
+        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
           {cleanNav.map((item, idx) => {
             if (item.divider) {
-              return (
-                <div key={`div-${idx}`} className="my-2 border-t border-gray-700/60" />
-              );
+              return <div key={`div-${idx}`} className="my-1.5 border-t border-slate-800" />;
             }
             const { to, label, icon: Icon } = item;
             return (
@@ -108,14 +116,14 @@ export default function Layout({ children }) {
                 to={to}
                 end={to === '/'}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 text-sm font-medium transition-colors ${
+                  `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                     isActive
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                      ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
+                      : 'text-slate-400 hover:bg-white/[0.07] hover:text-slate-100'
                   }`
                 }
               >
-                <Icon size={17} className="shrink-0" />
+                <Icon size={15} className="shrink-0" />
                 {open && <span className="truncate">{label}</span>}
               </NavLink>
             );
@@ -123,25 +131,32 @@ export default function Layout({ children }) {
         </nav>
 
         {/* User */}
-        <div className="border-t border-gray-700 p-3">
+        <div className="border-t border-slate-800 p-3">
           {open ? (
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
                 {user?.name?.[0]?.toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-white text-xs font-medium truncate">{user?.name}</p>
-                <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${ROLE_COLORS[user?.role] || 'bg-gray-700 text-gray-300'}`}>
+                <p className="text-slate-200 text-xs font-semibold truncate">{user?.name}</p>
+                <span className={`inline-block text-xs px-1.5 py-0.5 rounded font-medium mt-0.5 ${ROLE_STYLES[user?.role] || 'bg-slate-700 text-slate-400'}`}>
                   {user?.role}
                 </span>
               </div>
-              <button onClick={handleLogout} className="text-gray-400 hover:text-red-400 p-1" title="Logout">
-                <LogOut size={16} />
+              <button
+                onClick={handleLogout}
+                className="text-slate-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-400/10 transition-colors"
+                title="Logout"
+              >
+                <LogOut size={14} />
               </button>
             </div>
           ) : (
-            <button onClick={handleLogout} className="text-gray-400 hover:text-red-400 w-full flex justify-center p-1">
-              <LogOut size={18} />
+            <button
+              onClick={handleLogout}
+              className="text-slate-500 hover:text-red-400 w-full flex justify-center p-1.5 rounded-lg hover:bg-red-400/10 transition-colors"
+            >
+              <LogOut size={15} />
             </button>
           )}
         </div>
@@ -149,9 +164,12 @@ export default function Layout({ children }) {
 
       {/* Main */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-14 bg-white border-b flex items-center px-6 gap-2 shrink-0 shadow-sm">
-          <ChevronRight size={16} className="text-gray-300" />
-          <span className="text-gray-500 text-sm">Manufacturing ERP</span>
+        <header className="h-14 bg-white border-b border-slate-200 flex items-center px-6 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 font-medium">Manufacturing ERP</span>
+            <span className="text-slate-300 text-sm">/</span>
+            <span className="text-sm font-semibold text-slate-700">{pageTitle}</span>
+          </div>
         </header>
         <div className="flex-1 overflow-auto p-6">{children}</div>
       </main>

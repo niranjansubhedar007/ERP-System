@@ -80,7 +80,7 @@ export default function Users() {
         title="User Management"
         subtitle="Manage system users and role-based access"
         action={
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">
+          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 btn-primary">
             <Plus size={16} /> New User
           </button>
         }
@@ -101,24 +101,24 @@ export default function Users() {
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Create User">
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+            <label className="form-label">Full Name *</label>
             <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="form-input" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+            <label className="form-label">Email *</label>
             <input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="form-input" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+            <label className="form-label">Password *</label>
             <input type="password" required minLength={6} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="form-input" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+            <label className="form-label">Role *</label>
             <select required value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              className="form-input">
               <option value="sales">Sales</option>
               <option value="purchase">Purchase</option>
               <option value="warehouse">Warehouse</option>
@@ -134,8 +134,8 @@ export default function Users() {
             <p><strong>Production:</strong> Production orders</p>
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">Create User</button>
+            <button type="button" onClick={() => setShowCreate(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary">Create User</button>
           </div>
         </form>
       </Modal>

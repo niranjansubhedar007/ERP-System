@@ -22,16 +22,18 @@ export default function Production() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [completeTarget, setCompleteTarget] = useState(null);
 
-  const fetchOrders = useCallback(() => {
+  const [pagination, setPagination] = useState(null);
+
+  const fetchOrders = useCallback((p = 1) => {
     setLoading(true);
-    api.get('/production')
-      .then(r => setOrders(r.data))
+    api.get(`/production?page=${p}&limit=10`)
+      .then(r => { setOrders(r.data.data); setPagination(r.data.pagination); })
       .catch(() => toast.error('Failed to load production orders'))
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
-    fetchOrders();
+    fetchOrders(1);
     api.get('/products?type=finished_good').then(r => setProducts(r.data));
     api.get('/customer-orders').then(r => setCustomerOrders(r.data));
   }, [fetchOrders]);
@@ -48,7 +50,8 @@ export default function Production() {
       await api.patch(`/production/${completeTarget.id}/complete`);
       toast.success('Production completed — inventory updated');
       setCompleteTarget(null);
-      fetchOrders();
+
+      fetchOrders(1);
     } catch (err) { toast.error(err.response?.data?.error || 'Failed'); }
   };
 
@@ -57,7 +60,7 @@ export default function Production() {
       await api.delete(`/production/${deleteTarget.id}`);
       toast.success('Production order deleted');
       setDeleteTarget(null);
-      fetchOrders();
+      fetchOrders(1);
     } catch (err) { toast.error(err.response?.data?.error || 'Cannot delete'); }
   };
 
@@ -72,7 +75,7 @@ export default function Production() {
       toast.success('Production order created');
       setShowCreate(false);
       setForm({ customer_order_id: '', notes: '', items: [{ product_id: '', quantity_planned: '' }] });
-      fetchOrders();
+      fetchOrders(1);
     } catch (err) { toast.error(err.response?.data?.error || 'Failed'); }
   };
 
@@ -84,7 +87,7 @@ export default function Production() {
     { key: 'completed_at', label: 'Completed', render: v => v ? new Date(v).toLocaleDateString('en-IN') : '—' },
     { key: 'id', label: 'Actions', render: (id, row) => (
       <div className="flex items-center gap-3">
-        <button onClick={() => handleView(id)} className="text-blue-600 hover:text-blue-800" title="View"><Eye size={15} /></button>
+        <button onClick={() => handleView(id)} className="text-indigo-500 hover:text-indigo-700" title="View"><Eye size={15} /></button>
         {['planned', 'in_progress'].includes(row.status) && hasRole('admin', 'production') && (
           <button onClick={() => setCompleteTarget(row)} className="text-green-600 hover:text-green-800" title="Mark Complete">
             <CheckCircle size={15} />
@@ -101,30 +104,30 @@ export default function Production() {
     <div>
       <PageHeader title="Production" subtitle="Convert raw materials into finished goods"
         action={hasRole('admin', 'production') && (
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">
+          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 btn-primary">
             <Plus size={16} /> New Production Order
           </button>
         )}
       />
 
-      {loading ? <Spinner /> : <Table columns={columns} data={orders} emptyMessage="No production orders yet" />}
+      {loading ? <Spinner /> : <Table columns={columns} data={orders} emptyMessage="No production orders yet" pagination={pagination} onPageChange={fetchOrders} />}
 
       {/* Create Modal */}
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Create Production Order" size="lg">
         <form onSubmit={handleCreate} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Linked Customer Order</label>
+              <label className="form-label">Linked Customer Order</label>
               <select value={form.customer_order_id} onChange={e => setForm({ ...form, customer_order_id: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                className="form-input">
                 <option value="">None</option>
                 {customerOrders.map(co => <option key={co.id} value={co.id}>{co.order_number} – {co.customer_name}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+              <label className="form-label">Notes</label>
               <input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="form-input" />
             </div>
           </div>
 
@@ -138,13 +141,13 @@ export default function Production() {
             {form.items.map((item, i) => (
               <div key={i} className="flex gap-2 mb-2">
                 <select required value={item.product_id} onChange={e => updateItem(i, 'product_id', e.target.value)}
-                  className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                   <option value="">Select finished good</option>
                   {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
                 </select>
                 <input type="number" min="0.001" step="0.001" required placeholder="Qty" value={item.quantity_planned}
                   onChange={e => updateItem(i, 'quantity_planned', e.target.value)}
-                  className="w-32 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-32 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                 {form.items.length > 1 && (
                   <button type="button" onClick={() => removeItem(i)} className="text-red-400 hover:text-red-600 px-2">✕</button>
                 )}
@@ -153,8 +156,8 @@ export default function Production() {
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">Create</button>
+            <button type="button" onClick={() => setShowCreate(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary">Create</button>
           </div>
         </form>
       </Modal>

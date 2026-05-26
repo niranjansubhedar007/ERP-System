@@ -17,13 +17,17 @@ export default function Vendors() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [pagination, setPagination] = useState(null);
 
-  const fetchVendors = useCallback(() => {
+  const fetchVendors = useCallback((p = 1) => {
     setLoading(true);
-    api.get('/products/meta/vendors').then(r => setVendors(r.data)).finally(() => setLoading(false));
+    api.get(`/products/meta/vendors?page=${p}&limit=10`)
+      .then(r => { setVendors(r.data.data); setPagination(r.data.pagination); })
+      .catch(() => toast.error('Failed to load vendors'))
+      .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { fetchVendors(); }, [fetchVendors]);
+  useEffect(() => { fetchVendors(1); }, [fetchVendors]);
 
   const openCreate = () => { setEditing(null); setForm(EMPTY); setShowForm(true); };
   const openEdit = (v) => { setEditing(v); setForm({ name: v.name, email: v.email || '', phone: v.phone || '', address: v.address || '' }); setShowForm(true); };
@@ -39,7 +43,7 @@ export default function Vendors() {
         toast.success('Vendor added');
       }
       setShowForm(false);
-      fetchVendors();
+      fetchVendors(1);
     } catch (err) { toast.error(err.response?.data?.error || 'Failed'); }
   };
 
@@ -48,7 +52,7 @@ export default function Vendors() {
       await api.delete(`/products/meta/vendors/${deleteTarget.id}`);
       toast.success('Vendor deleted');
       setDeleteTarget(null);
-      fetchVendors();
+      fetchVendors(1);
     } catch (err) { toast.error(err.response?.data?.error || 'Cannot delete'); }
   };
 
@@ -67,7 +71,7 @@ export default function Vendors() {
     { key: 'created_at', label: 'Added On', render: v => new Date(v).toLocaleDateString('en-IN') },
     { key: 'id', label: 'Actions', render: (_, row) => (
       <div className="flex items-center gap-3">
-        <button onClick={() => openEdit(row)} className="text-blue-600 hover:text-blue-800"><Pencil size={15} /></button>
+        <button onClick={() => openEdit(row)} className="text-indigo-500 hover:text-indigo-700"><Pencil size={15} /></button>
         <button onClick={() => setDeleteTarget(row)} className="text-red-500 hover:text-red-700"><Trash2 size={15} /></button>
       </div>
     )},
@@ -76,40 +80,40 @@ export default function Vendors() {
   return (
     <div>
       <PageHeader title="Vendors" subtitle="Manage your vendor / supplier list"
-        action={<button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"><Plus size={16} /> Add Vendor</button>}
+        action={<button onClick={openCreate} className="flex items-center gap-2 btn-primary"><Plus size={16} /> Add Vendor</button>}
       />
-      <div className="bg-white border rounded-xl p-4 mb-6 inline-flex items-center gap-3">
+      <div className="bg-white border border-slate-100 rounded-xl shadow-card p-4 mb-6 inline-flex items-center gap-3">
         <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center"><Truck size={20} className="text-yellow-600" /></div>
-        <div><p className="text-xs text-gray-500">Total Vendors</p><p className="text-2xl font-bold text-gray-900">{vendors.length}</p></div>
+        <div><p className="text-xs text-slate-500">Total Vendors</p><p className="text-2xl font-bold text-slate-900">{pagination ? pagination.total : vendors.length}</p></div>
       </div>
 
-      {loading ? <Spinner /> : <Table columns={columns} data={vendors} emptyMessage="No vendors yet" />}
+      {loading ? <Spinner /> : <Table columns={columns} data={vendors} emptyMessage="No vendors yet" pagination={pagination} onPageChange={fetchVendors} />}
 
       <Modal open={showForm} onClose={() => setShowForm(false)} title={editing ? 'Edit Vendor' : 'Add Vendor'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Name <span className="text-red-500">*</span></label>
+            <label className="form-label">Vendor Name <span className="text-red-500">*</span></label>
             <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="RawMat Suppliers"
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="form-input" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="form-label">Email</label>
             <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="supply@vendor.com"
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="form-input" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+            <label className="form-label">Phone</label>
             <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="9876543210"
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="form-input" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+            <label className="form-label">Address</label>
             <textarea rows={3} value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Delhi, India"
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
+              className="form-input resize-none" />
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">{editing ? 'Update' : 'Add Vendor'}</button>
+            <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary">{editing ? 'Update' : 'Add Vendor'}</button>
           </div>
         </form>
       </Modal>

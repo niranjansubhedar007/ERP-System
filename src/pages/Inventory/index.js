@@ -11,10 +11,12 @@ export default function Inventory() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
-  const fetchInventory = useCallback(() => {
+  const [pagination, setPagination] = useState(null);
+
+  const fetchInventory = useCallback((p = 1) => {
     setLoading(true);
-    api.get('/inventory')
-      .then(r => setInventory(r.data))
+    api.get(`/inventory?page=${p}&limit=10`)
+      .then(r => { setInventory(r.data.data); setPagination(r.data.pagination); })
       .catch(() => toast.error('Failed to load inventory'))
       .finally(() => setLoading(false));
   }, []);
@@ -59,11 +61,11 @@ export default function Inventory() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white border rounded-xl p-4">
           <p className="text-xs text-gray-500 mb-1">Total Stock Value</p>
-          <p className="text-2xl font-bold text-gray-900">₹{totalValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+          <p className="text-2xl font-bold text-slate-900">₹{totalValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
         </div>
         <div className="bg-white border rounded-xl p-4">
           <p className="text-xs text-gray-500 mb-1">Total Products</p>
-          <p className="text-2xl font-bold text-gray-900">{filtered.length}</p>
+          <p className="text-2xl font-bold text-slate-900">{filtered.length}</p>
         </div>
         <div className="bg-white border rounded-xl p-4">
           <p className="text-xs text-gray-500 mb-1">Zero / Low Stock</p>
@@ -75,13 +77,13 @@ export default function Inventory() {
       <div className="flex gap-2 mb-4">
         {['all', 'raw_material', 'finished_good'].map(t => (
           <button key={t} onClick={() => setFilter(t)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium border transition-colors ${filter === t ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-50 border-gray-200 text-gray-600'}`}>
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium border transition-colors ${filter === t ? 'bg-indigo-600 text-white border-indigo-600' : 'hover:bg-slate-50 border-slate-200 text-slate-600'}`}>
             {t === 'all' ? 'All' : t === 'raw_material' ? 'Raw Materials' : 'Finished Goods'}
           </button>
         ))}
       </div>
 
-      {loading ? <Spinner /> : <Table columns={columns} data={filtered} emptyMessage="No inventory records" />}
+      {loading ? <Spinner /> : <Table columns={columns} data={filtered} emptyMessage="No inventory records" pagination={pagination} onPageChange={fetchInventory} />}
     </div>
   );
 }

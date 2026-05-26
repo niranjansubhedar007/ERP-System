@@ -15,24 +15,27 @@ export default function Inward() {
   const [showCreate, setShowCreate] = useState(false);
   const [viewRecord, setViewRecord] = useState(null);
   const [purchaseOrders, setPurchaseOrders] = useState([]);
-  const [poItems, setPoItems] = useState([]);
   const [form, setForm] = useState({ po_id: '', notes: '', items: [] });
 
-  const fetchRecords = useCallback(() => {
+  const [pagination, setPagination] = useState(null);
+
+  const fetchRecords = useCallback((p = 1) => {
     setLoading(true);
-    api.get('/inward').then(r => setRecords(r.data)).finally(() => setLoading(false));
+    api.get(`/inward?page=${p}&limit=10`)
+      .then(r => { setRecords(r.data.data); setPagination(r.data.pagination); })
+      .catch(() => toast.error('Failed to load inward records'))
+      .finally(() => setLoading(false));
   }, []);
-console.log(poItems);
 
   useEffect(() => {
-    fetchRecords();
+    fetchRecords(1);
     api.get('/purchase-orders').then(r => setPurchaseOrders(r.data.filter(po => po.status !== 'cancelled' && po.status !== 'received')));
+
   }, [fetchRecords]);
 
   const loadPOItems = async (poId) => {
-    if (!poId) { setPoItems([]); return; }
+    if (!poId) { setForm(f => ({ ...f, po_id: '', items: [] })); return; }
     const r = await api.get(`/inward/po/${poId}/items`);
-    setPoItems(r.data);
     setForm(f => ({
       ...f,
       po_id: poId,
@@ -68,8 +71,7 @@ console.log(poItems);
       toast.success('Inward record created, inventory updated');
       setShowCreate(false);
       setForm({ po_id: '', notes: '', items: [] });
-      setPoItems([]);
-      fetchRecords();
+      fetchRecords(1);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed');
     }
@@ -87,7 +89,7 @@ console.log(poItems);
     { key: 'received_by_name', label: 'Received By', render: v => v || '—' },
     { key: 'created_at', label: 'Date', render: v => new Date(v).toLocaleDateString('en-IN') },
     { key: 'id', label: 'Action', render: (id) => (
-      <button onClick={() => handleView(id)} className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-xs">
+      <button onClick={() => handleView(id)} className="text-indigo-500 hover:text-indigo-700 flex items-center gap-1 text-xs">
         <Eye size={14} /> View
       </button>
     )},
@@ -99,30 +101,30 @@ console.log(poItems);
         title="Inward (GRN)"
         subtitle="Record goods received from vendors — automatically updates inventory"
         action={hasRole('admin', 'warehouse', 'purchase') && (
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">
+          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 btn-primary">
             <Plus size={16} /> New GRN
           </button>
         )}
       />
 
-      {loading ? <Spinner /> : <Table columns={columns} data={records} emptyMessage="No inward records yet" />}
+      {loading ? <Spinner /> : <Table columns={columns} data={records} emptyMessage="No inward records yet" pagination={pagination} onPageChange={fetchRecords} />}
 
       {/* Create Modal */}
-      <Modal open={showCreate} onClose={() => { setShowCreate(false); setForm({ po_id: '', notes: '', items: [] }); setPoItems([]); }} title="Create Inward Record (GRN)" size="lg">
+      <Modal open={showCreate} onClose={() => { setShowCreate(false); setForm({ po_id: '', notes: '', items: [] }); }} title="Create Inward Record (GRN)" size="lg">
         <form onSubmit={handleCreate} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Purchase Order *</label>
+              <label className="form-label">Purchase Order *</label>
               <select required value={form.po_id} onChange={e => loadPOItems(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                className="form-input">
                 <option value="">Select PO</option>
                 {purchaseOrders.map(po => <option key={po.id} value={po.id}>{po.po_number} – {po.vendor_name}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+              <label className="form-label">Notes</label>
               <input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="form-input" />
             </div>
           </div>
 
@@ -145,7 +147,7 @@ console.log(poItems);
                       <td className="px-3 py-2">
                         <input type="number" min="0" step="0.001" max={item.pending_qty} value={item.quantity_received}
                           onChange={e => updateQty(i, e.target.value)} placeholder="0"
-                          className="w-full border rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                          className="w-full border rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-indigo-500" />
                       </td>
                     </tr>
                   ))}
@@ -156,9 +158,9 @@ console.log(poItems);
           )}
 
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={() => { setShowCreate(false); setForm({ po_id: '', notes: '', items: [] }); setPoItems([]); }}
-              className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">Save GRN</button>
+            <button type="button" onClick={() => { setShowCreate(false); setForm({ po_id: '', notes: '', items: [] }); }}
+              className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary">Save GRN</button>
           </div>
         </form>
       </Modal>

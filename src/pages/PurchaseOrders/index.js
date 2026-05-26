@@ -25,16 +25,18 @@ export default function PurchaseOrders() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  const fetchPOs = useCallback(() => {
+  const [pagination, setPagination] = useState(null);
+
+  const fetchPOs = useCallback((p = 1) => {
     setLoading(true);
-    api.get('/purchase-orders')
-      .then(r => setPos(r.data))
+    api.get(`/purchase-orders?page=${p}&limit=10`)
+      .then(r => { setPos(r.data.data); setPagination(r.data.pagination); })
       .catch(() => toast.error('Failed to load purchase orders'))
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
-    fetchPOs();
+    fetchPOs(1);
     api.get('/products?type=raw_material').then(r => setRawMaterials(r.data));
     api.get('/products/meta/vendors').then(r => setVendors(r.data));
     api.get('/customer-orders').then(r => setCustomerOrders(r.data));
@@ -84,7 +86,7 @@ export default function PurchaseOrders() {
         toast.success('Purchase order created');
       }
       setShowForm(false);
-      fetchPOs();
+      fetchPOs(1);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed');
     }
@@ -95,7 +97,7 @@ export default function PurchaseOrders() {
       await api.delete(`/purchase-orders/${deleteTarget.id}`);
       toast.success('Purchase order deleted');
       setDeleteTarget(null);
-      fetchPOs();
+      fetchPOs(1);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Cannot delete');
     }
@@ -110,7 +112,7 @@ export default function PurchaseOrders() {
     { key: 'created_at', label: 'Date', render: v => new Date(v).toLocaleDateString('en-IN') },
     { key: 'id', label: 'Actions', render: (id, row) => (
       <div className="flex items-center gap-3">
-        <button onClick={() => handleView(id)} className="text-blue-600 hover:text-blue-800" title="View"><Eye size={15} /></button>
+        <button onClick={() => handleView(id)} className="text-indigo-500 hover:text-indigo-700" title="View"><Eye size={15} /></button>
         {row.status === 'draft' && hasRole('admin', 'purchase') && (
           <button onClick={() => openEdit(row)} className="text-green-600 hover:text-green-800" title="Edit"><Pencil size={15} /></button>
         )}
@@ -127,13 +129,13 @@ export default function PurchaseOrders() {
         title="Purchase Orders"
         subtitle="Raise POs for raw material procurement"
         action={hasRole('admin', 'purchase') && (
-          <button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">
+          <button onClick={openCreate} className="flex items-center gap-2 btn-primary">
             <Plus size={16} /> New PO
           </button>
         )}
       />
 
-      {loading ? <Spinner /> : <Table columns={columns} data={pos} emptyMessage="No purchase orders yet" />}
+      {loading ? <Spinner /> : <Table columns={columns} data={pos} emptyMessage="No purchase orders yet" pagination={pagination} onPageChange={fetchPOs} />}
 
       {/* Create / Edit Modal */}
       <Modal open={showForm} onClose={() => setShowForm(false)}
@@ -141,26 +143,26 @@ export default function PurchaseOrders() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Vendor *</label>
+              <label className="form-label">Vendor *</label>
               <select required value={form.vendor_id} onChange={e => setForm({ ...form, vendor_id: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                className="form-input">
                 <option value="">Select vendor</option>
                 {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Linked Customer Order</label>
+              <label className="form-label">Linked Customer Order</label>
               <select value={form.customer_order_id} onChange={e => setForm({ ...form, customer_order_id: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                className="form-input">
                 <option value="">None</option>
                 {customerOrders.map(co => <option key={co.id} value={co.id}>{co.order_number} – {co.customer_name}</option>)}
               </select>
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <label className="form-label">Notes</label>
             <input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="form-input" />
           </div>
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -172,17 +174,17 @@ export default function PurchaseOrders() {
             {form.items.map((item, i) => (
               <div key={i} className="grid grid-cols-3 gap-2 mb-2">
                 <select required value={item.product_id} onChange={e => updateItem(i, 'product_id', e.target.value)}
-                  className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                   <option value="">Select material</option>
                   {rawMaterials.map(p => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
                 </select>
                 <input type="number" min="0.001" step="0.001" required placeholder="Qty" value={item.quantity_ordered}
                   onChange={e => updateItem(i, 'quantity_ordered', e.target.value)}
-                  className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                 <div className="flex gap-2">
                   <input type="number" min="0" step="0.01" required placeholder="Unit Price ₹" value={item.unit_price}
                     onChange={e => updateItem(i, 'unit_price', e.target.value)}
-                    className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                   {form.items.length > 1 && (
                     <button type="button" onClick={() => removeItem(i)} className="text-red-400 hover:text-red-600 px-2">✕</button>
                   )}
@@ -191,8 +193,8 @@ export default function PurchaseOrders() {
             ))}
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+            <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary">
               {editing ? 'Update PO' : 'Create PO'}
             </button>
           </div>
@@ -217,7 +219,7 @@ export default function PurchaseOrders() {
                   <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500">Ordered</th>
                   <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500">Received</th>
                   <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500">Unit Price</th>
-                  <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500">Total</th>
+                  <th className="px-4 py-2 text-right text-xs font-semibold text-slate-500">Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y">

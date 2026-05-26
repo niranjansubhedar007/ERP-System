@@ -21,14 +21,16 @@ export default function Products() {
   const [bom, setBom] = useState([{ raw_material_id: '', quantity_required: '' }]);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  const fetchProducts = useCallback(() => {
+  const [pagination, setPagination] = useState(null);
+
+  const fetchProducts = useCallback((p = 1) => {
     setLoading(true);
-    Promise.all([api.get('/products'), api.get('/products?type=raw_material')])
-      .then(([all, rm]) => { setProducts(all.data); setRawMaterials(rm.data); })
+    Promise.all([api.get(`/products?page=${p}&limit=10`), api.get('/products?type=raw_material')])
+      .then(([all, rm]) => { setProducts(all.data.data); setPagination(all.data.pagination); setRawMaterials(rm.data); })
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+  useEffect(() => { fetchProducts(1); }, [fetchProducts]);
 
   const openCreate = () => { setEditing(null); setForm(EMPTY); setShowForm(true); };
   const openEdit = (p) => {
@@ -54,7 +56,7 @@ export default function Products() {
         toast.success('Product created');
       }
       setShowForm(false);
-      fetchProducts();
+      fetchProducts(1);
     } catch (err) { toast.error(err.response?.data?.error || 'Failed'); }
   };
 
@@ -63,7 +65,7 @@ export default function Products() {
       await api.delete(`/products/${deleteTarget.id}`);
       toast.success('Product deleted');
       setDeleteTarget(null);
-      fetchProducts();
+      fetchProducts(1);
     } catch (err) { toast.error(err.response?.data?.error || 'Cannot delete'); }
   };
 
@@ -93,7 +95,7 @@ export default function Products() {
     { key: 'unit_price', label: 'Unit Price', render: v => `₹${parseFloat(v).toLocaleString('en-IN')}` },
     { key: 'id', label: 'Actions', render: (id, row) => (
       <div className="flex items-center gap-3">
-        <button onClick={() => openEdit(row)} className="text-blue-600 hover:text-blue-800"><Pencil size={15} /></button>
+        <button onClick={() => openEdit(row)} className="text-indigo-500 hover:text-indigo-700"><Pencil size={15} /></button>
         {row.type === 'finished_good' && (
           <button onClick={() => openBom(row)} className="text-purple-600 hover:text-purple-800" title="Set Bill of Materials"><Settings size={15} /></button>
         )}
@@ -105,52 +107,52 @@ export default function Products() {
   return (
     <div>
       <PageHeader title="Products & Bill of Materials" subtitle="Manage products and their Bill of Materials"
-        action={<button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"><Plus size={16} /> New Product</button>}
+        action={<button onClick={openCreate} className="flex items-center gap-2 btn-primary"><Plus size={16} /> New Product</button>}
       />
 
-      {loading ? <Spinner /> : <Table columns={columns} data={products} emptyMessage="No products yet" />}
+      {loading ? <Spinner /> : <Table columns={columns} data={products} emptyMessage="No products yet" pagination={pagination} onPageChange={fetchProducts} />}
 
       {/* Create / Edit Modal */}
       <Modal open={showForm} onClose={() => setShowForm(false)} title={editing ? 'Edit Product' : 'Create Product'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+              <label className="form-label">Name *</label>
               <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="form-input" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">SKU *</label>
+              <label className="form-label">SKU *</label>
               <input required value={form.sku} onChange={e => setForm({ ...form, sku: e.target.value })} disabled={!!editing}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50" />
+                className="form-input disabled:bg-gray-50" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+              <label className="form-label">Type *</label>
               <select required value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} disabled={!!editing}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50">
+                className="form-input disabled:bg-gray-50">
                 <option value="raw_material">Raw Material</option>
                 <option value="finished_good">Finished Good</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Unit *</label>
+              <label className="form-label">Unit *</label>
               <input required value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} placeholder="pcs / kg / ltr"
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="form-input" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Unit Price (₹)</label>
+              <label className="form-label">Unit Price (₹)</label>
               <input type="number" min="0" step="0.01" value={form.unit_price} onChange={e => setForm({ ...form, unit_price: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="form-input" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <label className="form-label">Description</label>
               <input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="form-input" />
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">{editing ? 'Update' : 'Create'}</button>
+            <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" className="btn-primary">{editing ? 'Update' : 'Create'}</button>
           </div>
         </form>
       </Modal>
@@ -163,13 +165,13 @@ export default function Products() {
             {bom.map((b, i) => (
               <div key={i} className="flex gap-2">
                 <select required value={b.raw_material_id} onChange={e => setBom(bom.map((x, idx) => idx === i ? { ...x, raw_material_id: e.target.value } : x))}
-                  className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                   <option value="">Select raw material</option>
                   {rawMaterials.map(r => <option key={r.id} value={r.id}>{r.name} ({r.sku})</option>)}
                 </select>
                 <input type="number" min="0.001" step="0.001" required placeholder="Qty per unit" value={b.quantity_required}
                   onChange={e => setBom(bom.map((x, idx) => idx === i ? { ...x, quantity_required: e.target.value } : x))}
-                  className="w-36 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  className="w-36 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                 {bom.length > 1 && (
                   <button type="button" onClick={() => setBom(bom.filter((_, idx) => idx !== i))} className="text-red-400 hover:text-red-600 px-2">✕</button>
                 )}
@@ -178,8 +180,8 @@ export default function Products() {
             <button type="button" onClick={() => setBom([...bom, { raw_material_id: '', quantity_required: '' }])}
               className="text-xs text-blue-600 hover:underline flex items-center gap-1"><Plus size={12} /> Add Material</button>
             <div className="flex justify-end gap-3 pt-2">
-              <button type="button" onClick={() => setBomProduct(null)} className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">Save Bill of Materials</button>
+              <button type="button" onClick={() => setBomProduct(null)} className="btn-secondary">Cancel</button>
+              <button type="submit" className="btn-primary">Save Bill of Materials</button>
             </div>
           </form>
         )}
